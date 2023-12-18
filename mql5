@@ -1,0 +1,77 @@
+
+// Buser EA - Forex Trading Software
+// Developer: Forex Robot Easy Team
+// Website: forexroboteasy.com
+
+// Include necessary libraries and dependencies
+#include <Trade\Trade.mqh>
+#include <Technical\Indicators\MovingAverages\MovingAverages.mqh>
+#include <Technical\Indicators\Trend\Trend.mqh>
+
+// Initialize trade object
+CTrade trade;
+
+// Initialize market analysis tools
+CMovingAverages ma;
+CTrend trend;
+
+// Define risk management parameters
+double stopLoss = 100; // Stop loss in pips
+double takeProfit = 200; // Take profit in pips
+double trailingStop = 50; // Trailing stop in pips
+
+// Define drawdown management parameters
+double maxDrawdown = 0.05; // Maximum drawdown as a fraction of account balance
+
+// Define trading parameters
+bool forceOpen = false; // Disable force open parameter
+bool autoLotSize = true; // Enable auto lot size function
+double fixedLotSize = 0.01; // Fixed lot size for trades
+
+// Main function for trade execution
+void OnTick()
+{
+   // Check if there is already an open trade
+   if(trade.PositionSelect(Symbol()) == NULL)
+   {
+      // Perform market analysis to make informed trading decision
+      double maValue = ma.iMA(Symbol(), PERIOD_CURRENT, 14, 0, MODE_SMA, PRICE_CLOSE, 0);
+      int trendDirection = trend.iTrend(Symbol(), PERIOD_CURRENT, 14);
+
+      // Enter a trade based on market analysis
+      if(maValue > 0 && trendDirection == MODE_UP)
+      {
+         // Calculate position size based on account balance and risk tolerance
+         double accountBalance = AccountBalance();
+         double risk = accountBalance * maxDrawdown;
+         double positionSize = NormalizeDouble(risk / stopLoss, 2);
+
+         // Check if auto lot size function is deactivated
+         if(!autoLotSize)
+            positionSize = fixedLotSize;
+
+         // Open a buy trade
+         trade.Buy(positionSize, Symbol(), 0, 0, stopLoss, takeProfit, NULL, NULL);
+
+         // Set trailing stop
+         trade.PositionModify(trade.PositionGetDouble(POSITION_TICKET), 0, 0, 0, trailingStop);
+      }
+      else if(maValue < 0 && trendDirection == MODE_DOWN)
+      {
+         // Calculate position size based on account balance and risk tolerance
+         double accountBalance = AccountBalance();
+         double risk = accountBalance * maxDrawdown;
+         double positionSize = NormalizeDouble(risk / stopLoss, 2);
+
+         // Check if auto lot size function is deactivated
+         if(!autoLotSize)
+            positionSize = fixedLotSize;
+
+         // Open a sell trade
+         trade.Sell(positionSize, Symbol(), 0, 0, stopLoss, takeProfit, NULL, NULL);
+
+         // Set trailing stop
+         trade.PositionModify(trade.PositionGetDouble(POSITION_TICKET), 0, 0, 0, trailingStop);
+      }
+   }
+}
